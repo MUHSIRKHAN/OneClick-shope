@@ -15,6 +15,8 @@ app.use(cors({
 }))
 app.use("/", express.static(path.join(__dirname,"./uploads")));
 app.use(bodyParser.urlencoded({ extended: true, limit: "50mb" }));
+ //its for errorhandling
+ app.use(ErrorHandler)
 
 
 
@@ -26,10 +28,11 @@ app.use(bodyParser.urlencoded({ extended: true, limit: "50mb" }));
   }
   //import routes
   const user=require("./controller/user");
+  const shop=require("./controller/shop");
   app.use("/api/v2/user",user)
+  app.use("/api/v2/shop",shop)
 
 
-  //its for errorhandling
-  app.use(ErrorHandler)
+ 
 
   module.exports=app; 
