@@ -4,13 +4,17 @@ const path=require("path");
 const router=express.Router();
 const fs = require('fs')
 const CatchAsyncErrors = require('../middleware/CatchAsyncErrors')
-const { isAuthenticated } = require('../middleware/auth')
+const { isAuthenticated, isSellerAuthenticated } = require('../middleware/auth')
 const ErrorHandler = require('../utils/ErrorHandler')
 const sendToken = require('../utils/jwtToken')
 const sendMail = require('../utils/Sendmail')
 const jwt = require('jsonwebtoken');
 const { upload } = require("../multer");
 const Shop = require("../model/shop");
+const sendShopToken = require("../utils/ShopToken");
+
+//create shop
+
 
 router.post("/create-shop",upload.single("file"),async(req,res,next)=>{
     try{
@@ -27,7 +31,7 @@ router.post("/create-shop",upload.single("file"),async(req,res,next)=>{
             })
             return next(new ErrorHandler('User already exists', 400))
           }
-          const filename = req.file.filename
+          const filename = req?.file.filename
           const fileUrl = path.join(filename)
       
           const seller = {
@@ -100,14 +104,73 @@ router.post(
           phoneNumber
         })
   
-        sendToken(seller, 201, res)
+        sendShopToken(seller, 201, res)
       } catch (error) {
         return next(new ErrorHandler(error.message, 500))
       }
     })
   )
 
-      
+     
+  //loginn shop
+  router.post(
+    '/login-shop',
+    CatchAsyncErrors(async (req, res, next) => {
+      try {
+        const { email, password } = req.body
+  
+        if (!email || !password) {
+          return next(new ErrorHandler('Please provide the all fields!', 400))
+        }
+  
+        const user = await Shop.findOne({ email }).select('+password')
+  
+        if (!user) {
+          return next(new ErrorHandler("User doesn't exists!", 400))
+        }
+  
+        const isPasswordValid = await user.comparePassword(password)
+  
+        if (!isPasswordValid) {
+          return next(
+            new ErrorHandler('Please provide the correct information', 400)
+          )
+        }
+  
+        sendShopToken(user, 201, res)
+      } catch (error) {
+        return next(new ErrorHandler(error.message, 500))
+      }
+    })
+  )
+
+
+
+  
+// load shop
+router.get(
+  '/getSeller',
+  isSellerAuthenticated,
+
+  CatchAsyncErrors(async (req, res, next) => {
+    try {
+     
+      const seller = await Shop.findById(req.seller._id)
+
+      if (!seller) {
+        return next(new ErrorHandler("User doesn't exists", 400))
+      }
+
+      res.status(200).json({
+        success: true,
+        seller,
+      })
+    } catch (error) {
+      return next(new ErrorHandler(error.message, 500))
+    }
+  })
+)
+
       
 
 
